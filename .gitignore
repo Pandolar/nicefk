@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+*.egg-info/
+backend/app/static/assets/
+backend/app/static/index.html
+backend/logs/*.log
+backend/logs/
+node_modules/
+frontend/node_modules/
+frontend/dist/
+test_nicefk.db
+debug_nicefk.db
+.pytest_cache/
+.coverage
