@@ -125,6 +125,32 @@ docker run -d \
 docker compose up -d --build
 ```
 
+当前 `docker compose` 配置里：
+- 服务名是 `app`
+- 实际容器名是 `nicefk-app`
+- 宿主机端口是 `18110`
+- 容器内端口是 `8000`
+
+项目根目录已提供一键部署脚本：
+
+```bash
+./deploy.sh
+```
+
+常用用法：
+
+```bash
+./deploy.sh
+./deploy.sh --pull
+./deploy.sh --logs
+```
+
+脚本会自动执行：
+- 可选 `git pull --ff-only`
+- `docker compose up -d --build --force-recreate app`
+- 轮询 `http://127.0.0.1:18110/healthz` 健康检查
+- 失败时自动输出最近日志
+
 ## 核心配置项
 
 ### 基础配置
