@@ -5,36 +5,8 @@ services:
     build: .
     container_name: nicefk-app
     ports:
-      - '8000:8000'
+      - '18110:8000'
     env_file:
       - .env
-    depends_on:
-      - mysql
-      - redis
-
-  mysql:
-    image: mysql:8.4
-    container_name: nicefk-mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: root123456
-      MYSQL_DATABASE: nicefk
-      MYSQL_USER: nicefk
-      MYSQL_PASSWORD: nicefk
-    ports:
-      - '3306:3306'
-    command: --default-authentication-plugin=mysql_native_password
-    volumes:
-      - mysql-data:/var/lib/mysql
-
-  redis:
-    image: redis:7-alpine
-    container_name: nicefk-redis
-    command: redis-server --requirepass aaaaTZ3QaF
-    ports:
-      - '6379:6379'
-    volumes:
-      - redis-data:/data
-
-volumes:
-  mysql-data:
-  redis-data:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
