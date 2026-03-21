@@ -6,6 +6,7 @@ const { Paragraph, Text, Title } = Typography;
 type Block =
   | { type: 'heading'; level: 1 | 2 | 3; text: string }
   | { type: 'paragraph'; text: string }
+  | { type: 'space'; lines: number }
   | { type: 'ul'; items: string[] }
   | { type: 'ol'; items: string[] };
 
@@ -43,8 +44,11 @@ export function MarkdownBlock({ content, className }: { content?: string | null;
             </ol>
           );
         }
+        if (block.type === 'space') {
+          return <div key={`${block.type}-${index}`} className="markdown-block__spacer" style={{ height: `${block.lines * 14}px` }} aria-hidden />;
+        }
         return (
-          <Paragraph key={`${block.type}-${index}`} className="public-paragraph">
+          <Paragraph key={`${block.type}-${index}`} className="public-paragraph public-paragraph--pre">
             {renderInline(block.text)}
           </Paragraph>
         );
@@ -59,6 +63,7 @@ function parseMarkdown(content: string): Block[] {
   let paragraphLines: string[] = [];
   let listItems: string[] = [];
   let listType: 'ul' | 'ol' | null = null;
+  let blankCount = 0;
 
   function flushParagraph() {
     if (!paragraphLines.length) {
@@ -79,6 +84,13 @@ function parseMarkdown(content: string): Block[] {
     listItems = [];
   }
 
+  function flushBlankSpace() {
+    if (blankCount > 1) {
+      blocks.push({ type: 'space', lines: blankCount - 1 });
+    }
+    blankCount = 0;
+  }
+
   for (const rawLine of lines) {
     const line = rawLine.trimEnd();
     const trimmed = line.trim();
@@ -86,8 +98,11 @@ function parseMarkdown(content: string): Block[] {
     if (!trimmed) {
       flushParagraph();
       flushList();
+      blankCount += 1;
       continue;
     }
+
+    flushBlankSpace();
 
     const heading = trimmed.match(/^(#{1,3})\s+(.*)$/);
     if (heading) {

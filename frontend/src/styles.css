@@ -314,6 +314,10 @@ a {
   margin-top: 6px;
 }
 
+.markdown-block__spacer {
+  width: 100%;
+}
+
 .public-paragraph--pre.ant-typography {
   white-space: pre-wrap;
 }

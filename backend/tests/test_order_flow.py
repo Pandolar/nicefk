@@ -221,6 +221,30 @@ async def test_admin_can_manage_agents_and_filter_cards(client, db_session):
 
 
 @pytest.mark.anyio
+async def test_admin_can_change_password(client, db_session):
+    login_response = await client.post('/api/admin/auth/login', json={'username': 'admin', 'password': 'Admin@123456'})
+    assert login_response.status_code == 200
+    token = login_response.json()['data']['token']
+    headers = {'Authorization': f'Bearer {token}'}
+
+    change_response = await client.post(
+        '/api/admin/auth/change-password',
+        headers=headers,
+        json={
+            'current_password': 'Admin@123456',
+            'new_password': 'Admin@654321',
+        },
+    )
+    assert change_response.status_code == 200, change_response.text
+
+    old_login = await client.post('/api/admin/auth/login', json={'username': 'admin', 'password': 'Admin@123456'})
+    assert old_login.status_code == 400
+
+    new_login = await client.post('/api/admin/auth/login', json={'username': 'admin', 'password': 'Admin@654321'})
+    assert new_login.status_code == 200
+
+
+@pytest.mark.anyio
 async def test_agent_can_create_own_channel(client, db_session):
     goods = seed_goods_and_cards(db_session)
 

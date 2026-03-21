@@ -1,15 +1,21 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { App, Button, Form, Input, Typography } from 'antd';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, getErrorMessage, unwrap } from '../api/client';
 import { AuthPage } from '../components/AuthPage';
 import type { LoginResult } from '../types';
 import { ADMIN_TOKEN_KEY } from '../utils/auth';
+import { buildConsolePageTitle } from '../utils/pageTitle';
 
 export function AdminLoginPage() {
   const navigate = useNavigate();
   const { message } = App.useApp();
   const [form] = Form.useForm<{ username: string; password: string }>();
+
+  useEffect(() => {
+    document.title = buildConsolePageTitle('管理员登录', '管理后台');
+  }, []);
 
   async function handleFinish(values: { username: string; password: string }) {
     try {

@@ -9,6 +9,7 @@ from backend.app.db.base import now_local
 from backend.app.models.cdk import CdkCard
 from backend.app.models.goods import Goods
 from backend.app.schemas.cdk import CdkBatchStatusRequest, CdkImportRequest
+from backend.app.services.goods_service import GoodsService
 
 
 class CdkService:
@@ -59,6 +60,7 @@ class CdkService:
             )
             imported += 1
         self.session.commit()
+        GoodsService(self.session).clear_public_cache([payload.goods_id])
         return {"imported": imported, "skipped": skipped}
 
     def batch_update_status(self, payload: CdkBatchStatusRequest) -> dict[str, int]:
@@ -85,6 +87,7 @@ class CdkService:
             self.session.add(card)
 
         self.session.commit()
+        GoodsService(self.session).clear_public_cache([card.goods_id for card in rows])
         return {"changed": changed, "skipped": skipped}
 
     def lock_next_available_card(self, goods_id: int) -> CdkCard | None:

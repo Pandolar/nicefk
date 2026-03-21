@@ -184,6 +184,14 @@ class ConfigService:
         self.cache.delete(f"{self.cache_prefix}{key}")
         return entry
 
+    def clear_all_cache(self) -> int:
+        """Clear all config cache entries currently managed by the config table."""
+
+        keys = [item.config_key for item in self.list_all()]
+        for key in keys:
+            self.cache.delete(f"{self.cache_prefix}{key}")
+        return len(keys)
+
     def list_all(self) -> list[ConfigEntry]:
         """Return all config entries sorted by group and key."""
 
@@ -204,6 +212,26 @@ class ConfigService:
         """Load admin account definitions from config."""
 
         return self.get("ADMIN_ACCOUNTS", [])
+
+    def save_admin_password(self, username: str, new_password: str) -> dict[str, Any]:
+        """Update one admin password stored inside config JSON."""
+
+        accounts = list(self.get_admin_accounts())
+        target = None
+        for item in accounts:
+            if item.get("username") == username:
+                target = item
+                break
+        if not target:
+            raise ValueError("管理员不存在")
+
+        saved = {
+            **target,
+            "password_hash": hash_password(new_password),
+        }
+        accounts[accounts.index(target)] = saved
+        self.set("ADMIN_ACCOUNTS", accounts)
+        return saved
 
     def get_agent_accounts(self) -> list[dict[str, Any]]:
         """Load agent account definitions from config."""

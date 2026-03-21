@@ -11,7 +11,7 @@ from backend.app.schemas.cdk import CdkBatchStatusRequest, CdkImportRequest, Cdk
 from backend.app.schemas.common import ApiResponse
 from backend.app.schemas.config import ConfigItem, ConfigUpdateRequest
 from backend.app.schemas.goods import GoodsAdminRead, GoodsCreate, GoodsRead, GoodsUpdate
-from backend.app.schemas.order import LoginRequest, LoginResult, OrderRead
+from backend.app.schemas.order import LoginRequest, LoginResult, OrderRead, PasswordChangeRequest
 from backend.app.services.auth_service import AuthService
 from backend.app.services.cdk_service import CdkService
 from backend.app.services.config_service import ConfigService
@@ -31,6 +31,23 @@ async def admin_login(payload: LoginRequest, db: Session = Depends(get_db)) -> A
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ApiResponse(message="登录成功", data=LoginResult(**result))
+
+
+@router.post("/auth/change-password", response_model=ApiResponse[dict])
+async def admin_change_password(
+    payload: PasswordChangeRequest,
+    session_payload: dict = Depends(admin_auth),
+    db: Session = Depends(get_db),
+) -> ApiResponse[dict]:
+    try:
+        AuthService(db).change_admin_password(
+            session_payload["username"],
+            payload.current_password,
+            payload.new_password,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ApiResponse(message="密码修改成功", data={"updated": True})
 
 
 @router.get("/dashboard", response_model=ApiResponse[dict])
@@ -152,6 +169,18 @@ async def update_config(
         is_sensitive=entry.is_sensitive,
     )
     return ApiResponse(message="更新成功", data=item)
+
+
+@router.post("/cache/configs/clear", response_model=ApiResponse[dict])
+async def clear_config_cache(_: dict = Depends(admin_auth), db: Session = Depends(get_db)) -> ApiResponse[dict]:
+    cleared = ConfigService(db).clear_all_cache()
+    return ApiResponse(message="配置缓存已清除", data={"cleared": cleared})
+
+
+@router.post("/cache/goods/clear", response_model=ApiResponse[dict])
+async def clear_goods_cache(_: dict = Depends(admin_auth), db: Session = Depends(get_db)) -> ApiResponse[dict]:
+    cleared = GoodsService(db).clear_public_cache()
+    return ApiResponse(message="商品缓存已清除", data={"cleared": cleared})
 
 
 @router.get("/agents", response_model=ApiResponse[list[AgentAccountRead]])

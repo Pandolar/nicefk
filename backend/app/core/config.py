@@ -15,9 +15,6 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="NICEFK_", env_file=".env", extra="ignore")
 
-    app_name: str = "nicefk"
-    env: str = "development"
-    secret_key: str = "change-me-please"
     site_url: str = "http://127.0.0.1:8000"
     database_url: str = "sqlite:///./nicefk.db"
     cache_backend: str = "redis"
@@ -31,8 +28,6 @@ class Settings(BaseSettings):
     testing: bool = False
     request_timeout_seconds: int = 10
     config_cache_ttl_seconds: int = 120
-    page_size_default: int = 20
-    page_size_max: int = 100
 
     @property
     def frontend_dist_path(self) -> Path:

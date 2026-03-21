@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Layout, Typography } from 'antd';
 import { api, unwrap } from '../api/client';
 import type { SiteInfo } from '../types';
+import { buildPublicPageTitle } from '../utils/pageTitle';
 
 const { Header, Content } = Layout;
 const { Paragraph, Text, Title } = Typography;
@@ -10,12 +11,13 @@ const { Paragraph, Text, Title } = Typography;
 interface PublicPageProps {
   brand?: string;
   title?: string;
+  pageTitle?: string;
   subtitle?: string;
   extra?: ReactNode;
   children: ReactNode;
 }
 
-export function PublicPage({ brand, title, subtitle, extra, children }: PublicPageProps) {
+export function PublicPage({ brand, title, pageTitle, subtitle, extra, children }: PublicPageProps) {
   const [site, setSite] = useState<SiteInfo | null>(null);
 
   useEffect(() => {
@@ -39,6 +41,17 @@ export function PublicPage({ brand, title, subtitle, extra, children }: PublicPa
   }, [site?.extra_js]);
 
   const displayBrand = brand ?? site?.site_name ?? '';
+
+  useEffect(() => {
+    const nextTitle = buildPublicPageTitle({
+      siteName: displayBrand,
+      pageName: pageTitle ?? title,
+      siteUrl: site?.site_url
+    });
+    if (typeof document !== 'undefined') {
+      document.title = nextTitle;
+    }
+  }, [displayBrand, pageTitle, site?.site_url, title]);
 
   return (
     <Layout className="public-layout">

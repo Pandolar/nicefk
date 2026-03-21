@@ -1,8 +1,6 @@
 import {
   AlipayCircleOutlined,
-  MinusOutlined,
   NotificationOutlined,
-  PlusOutlined,
   SearchOutlined,
   ShoppingCartOutlined,
   TagsOutlined
@@ -250,6 +248,7 @@ export function PublicGoodsPage() {
   return (
     <PublicPage
       brand={site?.site_name || undefined}
+      pageTitle={goods?.title || '商品页面'}
       extra={
         <Link to={`/orders/query?return_to=${encodeURIComponent(goodsPath)}`}>
           <Button type="primary" icon={<SearchOutlined />}>
@@ -328,10 +327,7 @@ export function PublicGoodsPage() {
                             value={quantity}
                             min={1}
                             max={Math.max(goods?.available_stock ?? 1, 1)}
-                            controls={{
-                              upIcon: <PlusOutlined />,
-                              downIcon: <MinusOutlined />
-                            }}
+                            controls
                             size="large"
                             onChange={(value) => {
                               const next = Math.max(1, Number(value || 1));

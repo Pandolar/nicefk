@@ -69,6 +69,20 @@ class AuthService:
                     }
         raise ValueError("代理账号或密码错误")
 
+    def change_admin_password(self, username: str, current_password: str, new_password: str) -> None:
+        """Change an admin password after verifying the current password."""
+
+        account = None
+        for item in self.config.get_admin_accounts():
+            if item.get("username") == username and int(item.get("status", 1)) == 1:
+                account = item
+                break
+        if not account:
+            raise ValueError("管理员不存在或已禁用")
+        if not verify_password(current_password, account.get("password_hash", "")):
+            raise ValueError("当前密码错误")
+        self.config.save_admin_password(username, new_password)
+
     def get_session(self, token: str) -> dict[str, Any] | None:
         """Read a previously stored session token."""
 

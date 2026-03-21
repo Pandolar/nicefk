@@ -26,6 +26,7 @@ import { api, authHeaders, getErrorMessage, unwrap } from '../api/client';
 import { StatusTag } from '../components/StatusTag';
 import type { AgentDashboardSummary, ChannelItem, GoodsItem, OrderInfo } from '../types';
 import { AGENT_CODE_KEY, AGENT_TOKEN_KEY, clearAgentSession } from '../utils/auth';
+import { buildConsolePageTitle } from '../utils/pageTitle';
 import { formatCurrency, formatDateTime, normalizePayMethodLabel, toPlainText, toSearchText } from '../utils/format';
 
 const { Header, Sider, Content } = Layout;
@@ -211,6 +212,10 @@ export function AgentDashboardPage() {
     () => goods.map((item) => ({ label: `${item.id} - ${item.title}`, value: item.id })),
     [goods]
   );
+
+  useEffect(() => {
+    document.title = buildConsolePageTitle(currentSection.label, '代理后台');
+  }, [currentSection.label]);
 
   const channelColumns: ProColumns<ChannelItem>[] = [
     { title: '关键词', dataIndex: 'keyword', hideInTable: true, fieldProps: { placeholder: '搜索渠道 / 博主 / 编码' } },

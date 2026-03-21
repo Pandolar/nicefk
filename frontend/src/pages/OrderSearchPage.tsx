@@ -55,6 +55,7 @@ export function OrderSearchPage() {
   return (
     <PublicPage
       title="查询订单"
+      pageTitle="查询订单"
       subtitle="支持按订单号或手机号/邮箱查询订单状态，已发卡订单会直接展示卡密结果。"
       extra={
         <Link to={returnPath}>

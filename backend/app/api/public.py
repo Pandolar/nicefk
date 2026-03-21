@@ -26,12 +26,7 @@ async def get_site(db: Session = Depends(get_db)) -> ApiResponse[SiteInfo]:
 
 @router.get("/goods", response_model=ApiResponse[list[GoodsRead]])
 async def list_goods(db: Session = Depends(get_db)) -> ApiResponse[list[GoodsRead]]:
-    service = GoodsService(db)
-    items = []
-    for goods in service.list_goods(public_only=True):
-        item = GoodsRead.model_validate(goods)
-        item.available_stock = service.available_stock(goods.id)
-        items.append(item)
+    items = GoodsService(db).list_public_goods_cached()
     return ApiResponse(message="获取成功", data=items)
 
 
@@ -39,11 +34,9 @@ async def list_goods(db: Session = Depends(get_db)) -> ApiResponse[list[GoodsRea
 async def get_goods(goods_id: int, db: Session = Depends(get_db)) -> ApiResponse[GoodsRead]:
     service = GoodsService(db)
     try:
-        goods = service.get_goods(goods_id, public_only=True)
+        item = service.get_public_goods_cached(goods_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    item = GoodsRead.model_validate(goods)
-    item.available_stock = service.available_stock(goods.id)
     return ApiResponse(message="获取成功", data=item)
 
 

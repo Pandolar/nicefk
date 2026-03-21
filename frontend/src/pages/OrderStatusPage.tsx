@@ -79,7 +79,11 @@ export function OrderStatusPage() {
   const statusMeta = useMemo(() => orderStatusMeta(order?.status ?? 'pending'), [order?.status]);
 
   return (
-    <PublicPage title="订单状态" subtitle="支付成功后页面会自动轮询状态，你也可以主动检查支付结果并补发卡密。">
+    <PublicPage
+      title="订单状态"
+      pageTitle={orderNo ? `订单状态 ${orderNo}` : '订单状态'}
+      subtitle="支付成功后页面会自动轮询状态，你也可以主动检查支付结果并补发卡密。"
+    >
       <Row gutter={[20, 20]}>
         <Col xs={24} lg={9}>
           <Card title="订单信息" bordered={false}>

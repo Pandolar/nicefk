@@ -49,6 +49,7 @@ import { api, authHeaders, getErrorMessage, unwrap } from '../api/client';
 import { StatusTag } from '../components/StatusTag';
 import type { AgentAccount, CdkItem, ChannelItem, ConfigItem, DashboardSummary, GoodsItem, OrderInfo } from '../types';
 import { ADMIN_TOKEN_KEY, clearAdminSession } from '../utils/auth';
+import { buildConsolePageTitle } from '../utils/pageTitle';
 import {
   formatCurrency,
   formatDateTime,
@@ -297,6 +298,7 @@ export function AdminDashboardPage() {
   const [agentModalOpen, setAgentModalOpen] = useState(false);
   const [channelModalOpen, setChannelModalOpen] = useState(false);
   const [channelBatchModalOpen, setChannelBatchModalOpen] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
   const [editingGoods, setEditingGoods] = useState<GoodsItem | null>(null);
   const [editingAgent, setEditingAgent] = useState<AgentAccount | null>(null);
@@ -306,6 +308,8 @@ export function AdminDashboardPage() {
   const [selectedConfigKey, setSelectedConfigKey] = useState('SITE_NOTICE');
   const [configText, setConfigText] = useState('');
   const [savingConfig, setSavingConfig] = useState(false);
+  const [clearingConfigCache, setClearingConfigCache] = useState(false);
+  const [clearingGoodsCache, setClearingGoodsCache] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
 
   const [goodsForm] = Form.useForm<GoodsFormValues>();
@@ -313,6 +317,7 @@ export function AdminDashboardPage() {
   const [agentForm] = Form.useForm<AgentFormValues>();
   const [channelForm] = Form.useForm<ChannelFormValues>();
   const [channelBatchForm] = Form.useForm<ChannelBatchValues>();
+  const [passwordForm] = Form.useForm<{ current_password: string; new_password: string; confirm_password: string }>();
 
   const activeSection: AdminSectionKey = isAdminSectionKey(section) ? section : 'overview';
   const currentSection = menuItems.find((item) => item.key === activeSection) ?? menuItems[0];
@@ -366,6 +371,10 @@ export function AdminDashboardPage() {
     }
     navigate('/admin/dashboard/overview', { replace: true });
   }, [navigate, section]);
+
+  useEffect(() => {
+    document.title = buildConsolePageTitle(currentSection.label, '管理后台');
+  }, [currentSection.label]);
 
   useEffect(() => {
     if (!token) {
@@ -524,6 +533,49 @@ export function AdminDashboardPage() {
   function handleLogout() {
     clearAdminSession();
     navigate('/admin/login');
+  }
+
+  async function submitAdminPassword(values: { current_password: string; new_password: string; confirm_password: string }) {
+    if (!token) {
+      return false;
+    }
+    try {
+      await unwrap<{ updated: boolean }>(
+        api.post(
+          '/api/admin/auth/change-password',
+          {
+            current_password: values.current_password,
+            new_password: values.new_password
+          },
+          { headers: authHeaders(token) }
+        )
+      );
+      message.success('管理员密码修改成功');
+      setPasswordModalOpen(false);
+      passwordForm.resetFields();
+      return true;
+    } catch (error) {
+      message.error(getErrorMessage(error, '密码修改失败'));
+      return false;
+    }
+  }
+
+  async function clearCache(scope: 'configs' | 'goods') {
+    if (!token) {
+      return;
+    }
+    const setter = scope === 'configs' ? setClearingConfigCache : setClearingGoodsCache;
+    setter(true);
+    try {
+      const result = await unwrap<{ cleared: number }>(
+        api.post(`/api/admin/cache/${scope}/clear`, {}, { headers: authHeaders(token) })
+      );
+      message.success(`${scope === 'configs' ? '配置' : '商品'}缓存已清理，处理 ${result.cleared} 项`);
+    } catch (error) {
+      message.error(getErrorMessage(error, '缓存清理失败'));
+    } finally {
+      setter(false);
+    }
   }
 
   async function submitGoods(values: GoodsFormValues) {
@@ -1374,6 +1426,14 @@ export function AdminDashboardPage() {
                 onChange={setSelectedConfigKey}
               />
               <Typography.Text type="secondary">{selectedConfig?.description || '请选择要编辑的配置项'}</Typography.Text>
+              <Space wrap>
+                <Button loading={clearingConfigCache} onClick={() => clearCache('configs')}>
+                  清配置缓存
+                </Button>
+                <Button loading={clearingGoodsCache} onClick={() => clearCache('goods')}>
+                  清商品缓存
+                </Button>
+              </Space>
               <Input.TextArea value={configText} onChange={(event) => setConfigText(event.target.value)} rows={16} />
               <Button type="primary" loading={savingConfig} onClick={saveConfig}>
                 保存配置
@@ -1441,6 +1501,9 @@ export function AdminDashboardPage() {
           <Space>
             <Button icon={<ReloadOutlined />} onClick={() => loadAll()}>
               刷新
+            </Button>
+            <Button onClick={() => setPasswordModalOpen(true)}>
+              修改密码
             </Button>
             <Button icon={<LogoutOutlined />} onClick={handleLogout}>
               退出登录
@@ -1549,6 +1612,52 @@ export function AdminDashboardPage() {
         </ProFormDependency>
         <ProFormDigit name="sort_order" label="排序" fieldProps={{ style: { width: '100%' } }} />
       </DrawerForm>
+
+      <ModalForm<{ current_password: string; new_password: string; confirm_password: string }>
+        title="修改管理员密码"
+        open={passwordModalOpen}
+        form={passwordForm}
+        modalProps={{
+          destroyOnClose: true,
+          onCancel: () => {
+            setPasswordModalOpen(false);
+            passwordForm.resetFields();
+          }
+        }}
+        onFinish={submitAdminPassword}
+      >
+        <ProFormText.Password
+          name="current_password"
+          label="当前密码"
+          placeholder="请输入当前密码"
+          rules={[{ required: true, message: '请输入当前密码' }]}
+        />
+        <ProFormText.Password
+          name="new_password"
+          label="新密码"
+          placeholder="请输入新密码"
+          rules={[
+            { required: true, message: '请输入新密码' },
+            { min: 6, message: '新密码至少 6 位' }
+          ]}
+        />
+        <ProFormText.Password
+          name="confirm_password"
+          label="确认新密码"
+          placeholder="请再次输入新密码"
+          rules={[
+            { required: true, message: '请再次输入新密码' },
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                if (!value || value === getFieldValue('new_password')) {
+                  return Promise.resolve();
+                }
+                return Promise.reject(new Error('两次输入的新密码不一致'));
+              }
+            })
+          ]}
+        />
+      </ModalForm>
 
       <ModalForm<CardImportValues>
         title="批量导入卡密"

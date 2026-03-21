@@ -257,6 +257,7 @@ class OrderService:
             self.session.refresh(order)
             notify_logger.info("order_no=%s trade_no=%s delivered=1", order_no, trade_no)
             self.cache.set(f"pay:success:{order_no}", {"status": order.status}, ex=600)
+            self.goods_service.clear_public_cache([goods.id])
             self.source_service.record_paid(order.agent_code, order.source_channel_code, order.amount)
             self.email_service.send_order_delivery_email(order, goods)
             return order
