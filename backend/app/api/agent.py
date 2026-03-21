@@ -50,9 +50,10 @@ async def agent_dashboard(session_payload: dict = Depends(agent_auth), db: Sessi
 
 @router.get("/orders", response_model=ApiResponse[list[OrderRead]])
 async def agent_orders(session_payload: dict = Depends(agent_auth), db: Session = Depends(get_db)) -> ApiResponse[list[OrderRead]]:
+    service = OrderService(db)
     data = [
-        OrderRead.model_validate(order)
-        for order in OrderService(db).list_orders(agent_code=session_payload["agent_code"])
+        service.build_order_read(order)
+        for order in service.list_orders(agent_code=session_payload["agent_code"])
         if order.status == "delivered"
     ]
     return ApiResponse(message="获取成功", data=data)

@@ -7,7 +7,8 @@ import {
 } from '@ant-design/icons';
 import { WechatOutlined } from '@ant-design/icons';
 import { App, Button, Card, Col, Form, Image, Input, InputNumber, Row, Space, Typography } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, getErrorMessage, unwrap } from '../api/client';
 import { MarkdownBlock } from '../components/MarkdownBlock';
@@ -34,6 +35,8 @@ export function PublicGoodsPage() {
   const [agentCode, setAgentCode] = useState<string | undefined>();
   const [channelCode, setChannelCode] = useState<string | undefined>();
   const [quantity, setQuantity] = useState(1);
+  const orderSectionRef = useRef<HTMLDivElement | null>(null);
+  const autoScrolledRef = useRef<string>('');
   const goodsPath = useMemo(() => {
     const query = searchParams.toString();
     return `/goods/${goodsId}${query ? `?${query}` : ''}`;
@@ -144,6 +147,27 @@ export function PublicGoodsPage() {
     return '请输入正确的手机号或邮箱';
   }, [goods?.contact_type]);
   const contactInputMode = goods?.contact_type === 'phone' ? 'numeric' : goods?.contact_type === 'email' ? 'email' : 'text';
+  const coverStyle = useMemo<CSSProperties>(
+    () => ({
+      objectFit: (goods?.cover_fit_mode || 'cover') as CSSProperties['objectFit'],
+      width: goods?.cover_width ? `${goods.cover_width}px` : undefined,
+      height: goods?.cover_height ? `${goods.cover_height}px` : undefined
+    }),
+    [goods?.cover_fit_mode, goods?.cover_height, goods?.cover_width]
+  );
+
+  useEffect(() => {
+    if (!goods || autoScrolledRef.current === goodsPath || !orderSectionRef.current) {
+      return;
+    }
+    if (!window.matchMedia('(max-width: 768px)').matches) {
+      return;
+    }
+    autoScrolledRef.current = goodsPath;
+    window.requestAnimationFrame(() => {
+      orderSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [goods, goodsPath]);
 
   function validateContact(value?: string) {
     const normalized = value?.trim() ?? '';
@@ -274,9 +298,9 @@ export function PublicGoodsPage() {
           <Row gutter={[{ xs: 0, sm: 24, lg: 24 }, 24]} align="middle">
             <Col xs={24} lg={10}>
               {goods?.cover ? (
-                <Image src={goods.cover} alt={goods.title} preview={false} className="goods-cover" />
+                <Image src={goods.cover} alt={goods.title} preview={false} className="goods-cover" style={coverStyle} />
               ) : (
-                <div className="goods-cover goods-cover--placeholder">
+                <div className="goods-cover goods-cover--placeholder" style={coverStyle}>
                   <ShoppingCartOutlined style={{ fontSize: 42, marginBottom: 12 }} />
                   <span>商品封面</span>
                 </div>
@@ -354,7 +378,7 @@ export function PublicGoodsPage() {
                     </div>
                   </div>
 
-                  <div className="product-pay-section">
+                  <div className="product-pay-section" ref={orderSectionRef}>
                     <Space wrap className="pay-action-group">
                       {paymentOptions.map((method) => renderPayButton(method))}
                     </Space>

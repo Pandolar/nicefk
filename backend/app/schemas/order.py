@@ -45,6 +45,8 @@ class OrderRead(BaseModel):
     order_no: str
     trade_no: str | None = None
     goods_id: int
+    goods_title: str | None = None
+    delivery_instructions: str | None = None
     buyer_contact: str
     contact_type: str
     quantity: int = 1

@@ -6,6 +6,7 @@ import type { OrderInfo } from '../types';
 import { formatCurrency, formatDateTime, normalizePayMethodLabel } from '../utils/format';
 import { readRecentOrderRefs, saveRecentOrderRef } from '../utils/recentOrders';
 import { DeliveredCardList } from './DeliveredCardList';
+import { MarkdownBlock } from './MarkdownBlock';
 import { StatusTag } from './StatusTag';
 
 interface PublicRecentOrdersProps {
@@ -89,7 +90,19 @@ export function PublicRecentOrders({
               <Typography.Text>{normalizePayMethodLabel(item.pay_method)}</Typography.Text>
               <Typography.Text type="secondary">{formatDateTime(item.deliver_time || item.pay_time || item.created_at)}</Typography.Text>
             </Space>
-            {item.status === 'delivered' ? <DeliveredCardList snapshot={item.card_snapshot} /> : null}
+            {item.status === 'delivered' ? (
+              <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                <DeliveredCardList snapshot={item.card_snapshot} />
+                {item.delivery_instructions ? (
+                  <div>
+                    <Typography.Title level={5} style={{ marginTop: 0 }}>
+                      发货说明
+                    </Typography.Title>
+                    <MarkdownBlock content={item.delivery_instructions} />
+                  </div>
+                ) : null}
+              </Space>
+            ) : null}
             <Link to={`/order/${item.order_no}`}>
               <Typography.Link>查看订单详情</Typography.Link>
             </Link>

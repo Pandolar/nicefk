@@ -8,7 +8,11 @@ export interface GoodsItem {
   title: string;
   slug?: string | null;
   cover?: string | null;
+  cover_fit_mode?: string;
+  cover_width?: number | null;
+  cover_height?: number | null;
   description: string;
+  delivery_instructions?: string;
   price: string;
   original_price?: string | null;
   status: string;
@@ -35,6 +39,8 @@ export interface OrderInfo {
   order_no: string;
   trade_no?: string | null;
   goods_id: number;
+  goods_title?: string | null;
+  delivery_instructions?: string | null;
   buyer_contact: string;
   contact_type?: string;
   quantity?: number;

@@ -11,7 +11,11 @@ class GoodsBase(BaseModel):
     title: str = Field(..., max_length=120)
     slug: str | None = Field(default=None, max_length=120)
     cover: str | None = None
+    cover_fit_mode: str = "cover"
+    cover_width: int | None = None
+    cover_height: int | None = None
     description: str = ""
+    delivery_instructions: str = ""
     price: Decimal
     original_price: Decimal | None = None
     status: str = "on"
@@ -36,7 +40,11 @@ class GoodsUpdate(BaseModel):
     title: str | None = None
     slug: str | None = None
     cover: str | None = None
+    cover_fit_mode: str | None = None
+    cover_width: int | None = None
+    cover_height: int | None = None
     description: str | None = None
+    delivery_instructions: str | None = None
     price: Decimal | None = None
     original_price: Decimal | None = None
     status: str | None = None

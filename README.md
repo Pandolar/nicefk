@@ -203,6 +203,56 @@ docker compose up -d --build
 - 订单查询页：`/orders/query`
 - 查询页支持一个输入框直接查询 `订单号 / 手机号 / 邮箱`
 - 支付成功后，浏览器会记录近期订单引用，用户再次进入查询页或订单状态页时可直接查看已成功订单和卡密
+- 商品页仅在移动端进入后自动定位到下单区域，桌面端保持正常首屏浏览
+- 订单状态页在检测到已发货后会自动定位到卡密与发货说明区域
+
+## 商品内容配置
+- 商品说明：支持 Markdown，并启用原生 HTML 扩展
+- 发货说明：每个商品可单独配置，留空时自动使用系统配置里的默认发货说明模板；支付成功后会和卡密一起显示在订单结果区域
+- 商品封面：后台可配置封面地址、显示方式、宽度、高度
+
+### 封面显示方式
+- `cover`：填充裁切，优先铺满区域
+- `contain`：完整显示整张图片
+- `fill`：拉伸铺满容器
+- `scale-down`：按比例缩小后显示
+
+### Markdown / HTML 说明
+当前前台 Markdown 渲染基于 `markdown-it`，开启了：
+- 自动链接
+- 表格、列表、代码块等常用 Markdown 能力
+- 段内换行
+- 原生 HTML
+
+因为 Markdown 标准本身不负责“文字颜色”和“图片尺寸”这类样式控制，所以这两类需求建议直接在内容里写 HTML。
+
+颜色示例：
+
+```html
+<span style="color:#ff4d4f;">红色提示文字</span>
+<span style="color:#16a34a;">绿色提示文字</span>
+```
+
+图片尺寸示例：
+
+```html
+<img src="https://example.com/demo.png" width="320" />
+<img src="https://example.com/demo.png" width="320" height="180" />
+```
+
+带圆角和居中示例：
+
+```html
+<img
+  src="https://example.com/demo.png"
+  width="320"
+  style="display:block;margin:0 auto;border-radius:16px;"
+/>
+```
+
+注意：
+- 由于开启了原生 HTML，这部分内容应只由可信管理员编辑
+- 如果要做复杂排版，建议优先使用 Markdown + 少量 HTML 的组合
 
 ## 后台入口
 - 管理员登录：`/admin/login`

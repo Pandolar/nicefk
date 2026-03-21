@@ -33,14 +33,17 @@ import {
   Form,
   Grid,
   Input,
+  InputNumber,
   Layout,
+  List,
   Menu,
   Progress,
   Row,
-  Select,
   Space,
   Statistic,
+  Switch,
   Tag,
+  Tabs,
   Typography
 } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
@@ -53,7 +56,6 @@ import { buildConsolePageTitle } from '../utils/pageTitle';
 import {
   formatCurrency,
   formatDateTime,
-  maskSensitiveValue,
   normalizePayMethodLabel,
   normalizePayMethods,
   prettyConfigValue,
@@ -83,7 +85,11 @@ type GoodsFormValues = {
   title: string;
   slug?: string;
   cover?: string;
+  cover_fit_mode: string;
+  cover_width?: number;
+  cover_height?: number;
   description: string;
+  delivery_instructions: string;
   price: number;
   original_price?: number;
   status: string;
@@ -306,7 +312,8 @@ export function AdminDashboardPage() {
   const [selectedCardIds, setSelectedCardIds] = useState<number[]>([]);
   const [selectedChannelKeys, setSelectedChannelKeys] = useState<string[]>([]);
   const [selectedConfigKey, setSelectedConfigKey] = useState('SITE_NOTICE');
-  const [configText, setConfigText] = useState('');
+  const [activeConfigGroup, setActiveConfigGroup] = useState('all');
+  const [configDraftValue, setConfigDraftValue] = useState<string | number | boolean>('');
   const [savingConfig, setSavingConfig] = useState(false);
   const [clearingConfigCache, setClearingConfigCache] = useState(false);
   const [clearingGoodsCache, setClearingGoodsCache] = useState(false);
@@ -337,6 +344,11 @@ export function AdminDashboardPage() {
     const value = configs.find((item) => item.config_key === 'SITE_URL')?.config_value;
     return typeof value === 'string' && value ? value.replace(/\/$/, '') : window.location.origin;
   }, [configs]);
+  const configGroupOptions = useMemo(() => ['all', ...Array.from(new Set(configs.map((item) => item.group_name)))], [configs]);
+  const groupedConfigs = useMemo(
+    () => (activeConfigGroup === 'all' ? configs : configs.filter((item) => item.group_name === activeConfigGroup)),
+    [activeConfigGroup, configs]
+  );
 
   const paidOrders = useMemo(() => orders.filter((item) => item.status === 'delivered' || item.status === 'paid'), [orders]);
   const pendingOrders = useMemo(() => orders.filter((item) => item.status === 'pending'), [orders]);
@@ -385,7 +397,15 @@ export function AdminDashboardPage() {
 
   useEffect(() => {
     if (selectedConfig) {
-      setConfigText(prettyConfigValue(selectedConfig.config_value));
+      if (selectedConfig.config_type === 'json') {
+        setConfigDraftValue(prettyConfigValue(selectedConfig.config_value));
+      } else if (selectedConfig.config_type === 'bool') {
+        setConfigDraftValue(Boolean(selectedConfig.config_value));
+      } else if (selectedConfig.config_type === 'int') {
+        setConfigDraftValue(Number(selectedConfig.config_value ?? 0));
+      } else {
+        setConfigDraftValue(String(selectedConfig.config_value ?? ''));
+      }
     }
   }, [selectedConfig]);
 
@@ -399,6 +419,12 @@ export function AdminDashboardPage() {
   }, [configs, selectedConfigKey]);
 
   useEffect(() => {
+    if (!configGroupOptions.includes(activeConfigGroup)) {
+      setActiveConfigGroup('all');
+    }
+  }, [activeConfigGroup, configGroupOptions]);
+
+  useEffect(() => {
     if (!goodsDrawerOpen) {
       return;
     }
@@ -408,7 +434,11 @@ export function AdminDashboardPage() {
             title: editingGoods.title,
             slug: editingGoods.slug ?? undefined,
             cover: editingGoods.cover ?? undefined,
+            cover_fit_mode: editingGoods.cover_fit_mode || 'cover',
+            cover_width: editingGoods.cover_width ?? undefined,
+            cover_height: editingGoods.cover_height ?? undefined,
             description: editingGoods.description,
+            delivery_instructions: editingGoods.delivery_instructions || '',
             price: toNumber(editingGoods.price),
             original_price: editingGoods.original_price ? toNumber(editingGoods.original_price) : undefined,
             status: editingGoods.status,
@@ -425,7 +455,11 @@ export function AdminDashboardPage() {
             title: '',
             slug: undefined,
             cover: undefined,
+            cover_fit_mode: 'cover',
+            cover_width: undefined,
+            cover_height: undefined,
             description: '',
+            delivery_instructions: '',
             price: 19.9,
             original_price: undefined,
             status: 'on',
@@ -588,7 +622,11 @@ export function AdminDashboardPage() {
         pay_methods: normalizePayMethods(values.pay_methods),
         slug: values.slug || null,
         cover: values.cover || null,
+        cover_fit_mode: values.cover_fit_mode,
+        cover_width: values.cover_width ?? null,
+        cover_height: values.cover_height ?? null,
         original_price: values.original_price ?? null,
+        delivery_instructions: values.delivery_instructions || '',
         stock_display_text: values.stock_display_mode === 'custom' ? values.stock_display_text || null : null,
         email_subject_template: values.email_enabled ? values.email_subject_template || null : null,
         email_body_template: values.email_enabled ? values.email_body_template || null : null,
@@ -759,7 +797,16 @@ export function AdminDashboardPage() {
     }
     setSavingConfig(true);
     try {
-      const value = selectedConfig.config_type === 'json' ? JSON.parse(configText) : configText;
+      let value: unknown;
+      if (selectedConfig.config_type === 'json') {
+        value = JSON.parse(String(configDraftValue || '').trim() || '{}');
+      } else if (selectedConfig.config_type === 'bool') {
+        value = Boolean(configDraftValue);
+      } else if (selectedConfig.config_type === 'int') {
+        value = Number(configDraftValue ?? 0);
+      } else {
+        value = String(configDraftValue ?? '');
+      }
       await unwrap<ConfigItem>(api.put(`/api/admin/configs/${selectedConfig.config_key}`, { value }, { headers: authHeaders(token) }));
       message.success('配置保存成功');
       await loadAll();
@@ -784,6 +831,21 @@ export function AdminDashboardPage() {
       width: 140,
       render: (_, record) =>
         record.stock_display_mode === 'custom' ? record.stock_display_text || '自定义文案' : '真实库存'
+    },
+    {
+      title: '封面展示',
+      dataIndex: 'cover_fit_mode',
+      width: 120,
+      search: false,
+      render: (_, record) => {
+        const modeText: Record<string, string> = {
+          cover: '填充裁切',
+          contain: '完整显示',
+          fill: '拉伸铺满',
+          'scale-down': '按比例缩小'
+        };
+        return modeText[record.cover_fit_mode || 'cover'] || '填充裁切';
+      }
     },
     { title: '状态', dataIndex: 'status', valueEnum: goodsStatusEnum, width: 90, search: false },
     {
@@ -1013,37 +1075,6 @@ export function AdminDashboardPage() {
           编辑
         </Button>
       ]
-    }
-  ];
-
-  const configColumns: ProColumns<ConfigItem>[] = [
-    { title: '关键词', dataIndex: 'keyword', hideInTable: true, fieldProps: { placeholder: '搜索 key / 说明 / 分组' } },
-    {
-      title: '分组',
-      dataIndex: 'group_name',
-      hideInTable: true,
-      valueType: 'select',
-      fieldProps: {
-        allowClear: true,
-        options: Array.from(new Set(configs.map((item) => item.group_name))).map((item) => ({ label: item, value: item }))
-      }
-    },
-    { title: 'Key', dataIndex: 'config_key', copyable: true, width: 200 },
-    { title: '分组', dataIndex: 'group_name', width: 110 },
-    { title: '类型', dataIndex: 'config_type', width: 100 },
-    { title: '说明', dataIndex: 'description', ellipsis: true },
-    {
-      title: '当前值',
-      dataIndex: 'config_value',
-      search: false,
-      render: (_, record) =>
-        record.is_sensitive ? (
-          maskSensitiveValue(record.config_value)
-        ) : (
-          <Typography.Paragraph className="config-preview" ellipsis={{ rows: 2, expandable: false }}>
-            {prettyConfigValue(record.config_value)}
-          </Typography.Paragraph>
-        )
     }
   ];
 
@@ -1390,42 +1421,58 @@ export function AdminDashboardPage() {
   function renderConfigSection() {
     return (
       <Row gutter={[16, 16]}>
-        <Col xs={24} xl={14}>
-          <ProTable<ConfigItem>
-            key="admin-configs-table"
-            rowKey="config_key"
-            params={{ reloadToken }}
-            size="small"
-            cardBordered
-            columns={configColumns}
-            loading={loading}
-            search={smallTableSearch}
-            pagination={{ pageSize: 10, showSizeChanger: false }}
-            options={false}
-            onRow={(record) => ({
-              onClick: () => setSelectedConfigKey(record.config_key)
-            })}
-            request={async (params) => {
-              const keyword = toSearchText(params.keyword);
-              const groupName = toPlainText(params.group_name).trim();
-              const filtered = configs.filter((item) => {
-                const hitKeyword = !keyword || toSearchText(item.config_key, item.description, item.group_name).includes(keyword);
-                const hitGroup = !groupName || item.group_name === groupName;
-                return hitKeyword && hitGroup;
-              });
-              return toPagedResult(filtered, params);
-            }}
-          />
+        <Col xs={24} xl={9}>
+          <ProCard title="配置列表" className="dashboard-panel">
+            <Space direction="vertical" size={14} style={{ width: '100%' }}>
+              <Tabs
+                activeKey={activeConfigGroup}
+                onChange={setActiveConfigGroup}
+                items={configGroupOptions.map((item) => ({
+                  key: item,
+                  label: item === 'all' ? '全部' : item
+                }))}
+              />
+              <List
+                loading={loading}
+                dataSource={groupedConfigs}
+                renderItem={(item) => {
+                  const active = item.config_key === selectedConfigKey;
+                  return (
+                    <List.Item
+                      onClick={() => setSelectedConfigKey(item.config_key)}
+                      style={{
+                        cursor: 'pointer',
+                        borderRadius: 12,
+                        paddingInline: 14,
+                        background: active ? 'rgba(22, 119, 255, 0.08)' : 'transparent',
+                        border: active ? '1px solid rgba(22, 119, 255, 0.18)' : '1px solid transparent'
+                      }}
+                    >
+                      <List.Item.Meta
+                        title={
+                          <Space size={8}>
+                            <Typography.Text strong>{item.config_key}</Typography.Text>
+                            <Tag>{item.config_type}</Tag>
+                          </Space>
+                        }
+                        description={item.description || item.group_name}
+                      />
+                    </List.Item>
+                  );
+                }}
+              />
+            </Space>
+          </ProCard>
         </Col>
-        <Col xs={24} xl={10}>
+        <Col xs={24} xl={15}>
           <ProCard title={selectedConfig?.config_key || '编辑配置'} className="dashboard-panel">
             <Space direction="vertical" size={14} style={{ width: '100%' }}>
-              <Select
-                value={selectedConfigKey}
-                options={configs.map((item) => ({ label: item.config_key, value: item.config_key }))}
-                onChange={setSelectedConfigKey}
-              />
-              <Typography.Text type="secondary">{selectedConfig?.description || '请选择要编辑的配置项'}</Typography.Text>
+              <Descriptions column={1} size="small" bordered>
+                <Descriptions.Item label="配置键">{selectedConfig?.config_key || '-'}</Descriptions.Item>
+                <Descriptions.Item label="分组">{selectedConfig?.group_name || '-'}</Descriptions.Item>
+                <Descriptions.Item label="类型">{selectedConfig?.config_type || '-'}</Descriptions.Item>
+                <Descriptions.Item label="说明">{selectedConfig?.description || '请选择要编辑的配置项'}</Descriptions.Item>
+              </Descriptions>
               <Space wrap>
                 <Button loading={clearingConfigCache} onClick={() => clearCache('configs')}>
                   清配置缓存
@@ -1434,10 +1481,42 @@ export function AdminDashboardPage() {
                   清商品缓存
                 </Button>
               </Space>
-              <Input.TextArea value={configText} onChange={(event) => setConfigText(event.target.value)} rows={16} />
-              <Button type="primary" loading={savingConfig} onClick={saveConfig}>
-                保存配置
-              </Button>
+              {selectedConfig?.config_type === 'bool' ? (
+                <div className="config-editor-switch">
+                  <Typography.Text>当前开关</Typography.Text>
+                  <Switch checked={Boolean(configDraftValue)} onChange={(checked) => setConfigDraftValue(checked)} />
+                </div>
+              ) : selectedConfig?.config_type === 'int' ? (
+                <InputNumber
+                  style={{ width: '100%' }}
+                  value={Number(configDraftValue ?? 0)}
+                  onChange={(value) => setConfigDraftValue(Number(value ?? 0))}
+                />
+              ) : (
+                <Input.TextArea
+                  value={String(configDraftValue ?? '')}
+                  onChange={(event) => setConfigDraftValue(event.target.value)}
+                  rows={selectedConfig?.config_type === 'json' ? 18 : 14}
+                />
+              )}
+              <Space wrap>
+                <Button type="primary" loading={savingConfig} onClick={saveConfig}>
+                  保存配置
+                </Button>
+                {selectedConfig?.config_type === 'json' ? (
+                  <Button
+                    onClick={() => {
+                      try {
+                        setConfigDraftValue(JSON.stringify(JSON.parse(String(configDraftValue || '{}')), null, 2));
+                      } catch {
+                        message.warning('当前 JSON 格式不正确，无法格式化');
+                      }
+                    }}
+                  >
+                    格式化 JSON
+                  </Button>
+                ) : null}
+              </Space>
             </Space>
           </ProCard>
         </Col>
@@ -1541,7 +1620,29 @@ export function AdminDashboardPage() {
         <ProFormText name="title" label="商品标题" rules={[{ required: true, message: '请输入商品标题' }]} />
         <ProFormText name="slug" label="商品标识" placeholder="如 vip-card" />
         <ProFormText name="cover" label="封面地址" />
+        <Row gutter={12}>
+          <Col span={8}>
+            <ProFormSelect
+              name="cover_fit_mode"
+              label="封面显示方式"
+              valueEnum={{ cover: '填充裁切', contain: '完整显示', fill: '拉伸铺满', 'scale-down': '按比例缩小' }}
+              rules={[{ required: true }]}
+            />
+          </Col>
+          <Col span={8}>
+            <ProFormDigit name="cover_width" label="封面宽度" min={80} fieldProps={{ style: { width: '100%' }, addonAfter: 'px' }} />
+          </Col>
+          <Col span={8}>
+            <ProFormDigit name="cover_height" label="封面高度" min={80} fieldProps={{ style: { width: '100%' }, addonAfter: 'px' }} />
+          </Col>
+        </Row>
         <ProFormTextArea name="description" label="商品说明（Markdown）" fieldProps={{ rows: 5 }} />
+        <ProFormTextArea
+          name="delivery_instructions"
+          label="发货说明（Markdown，可留空）"
+          extra="留空时使用系统配置中的默认发货说明模板"
+          fieldProps={{ rows: 5 }}
+        />
         <Row gutter={12}>
           <Col span={12}>
             <ProFormDigit name="price" label="售价" min={0} fieldProps={{ style: { width: '100%' } }} rules={[{ required: true }]} />

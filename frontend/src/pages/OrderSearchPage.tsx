@@ -1,9 +1,10 @@
 import { SearchOutlined } from '@ant-design/icons';
 import { App, Button, Card, Col, Form, Input, List, Row, Space, Typography } from 'antd';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, getErrorMessage, unwrap } from '../api/client';
 import { DeliveredCardList } from '../components/DeliveredCardList';
+import { MarkdownBlock } from '../components/MarkdownBlock';
 import { PublicPage } from '../components/PublicPage';
 import { PublicRecentOrders } from '../components/PublicRecentOrders';
 import { StatusTag } from '../components/StatusTag';
@@ -21,10 +22,27 @@ export function OrderSearchPage() {
   const [form] = Form.useForm<SearchForm>();
   const [orders, setOrders] = useState<OrderInfo[]>([]);
   const [loading, setLoading] = useState(false);
+  const deliveryRef = useRef<HTMLDivElement | null>(null);
+  const autoScrollMarkerRef = useRef('');
   const returnPath = useMemo(() => {
     const candidate = searchParams.get('return_to') || localStorage.getItem('nicefk-last-public-goods-path') || '/goods/1';
     return candidate.startsWith('/goods/') ? candidate : '/goods/1';
   }, [searchParams]);
+
+  useEffect(() => {
+    const delivered = orders.find((item) => item.status === 'delivered');
+    if (!delivered || !deliveryRef.current) {
+      return;
+    }
+    const marker = `${delivered.order_no}:${delivered.deliver_time || delivered.pay_time || 'done'}`;
+    if (autoScrollMarkerRef.current === marker) {
+      return;
+    }
+    autoScrollMarkerRef.current = marker;
+    window.requestAnimationFrame(() => {
+      deliveryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [orders]);
 
   async function handleSearch(values: SearchForm) {
     const query = values.query?.trim();
@@ -77,7 +95,7 @@ export function OrderSearchPage() {
           </Card>
         </Col>
 
-        <Col xs={24} lg={17}>
+        <Col xs={24} lg={17} ref={deliveryRef}>
           <Card title={orders.length ? '查询结果' : '近期订单'} bordered={false}>
             {orders.length ? (
               <List
@@ -105,7 +123,17 @@ export function OrderSearchPage() {
                         <Col xs={24} md={12}>发卡时间：{formatDateTime(item.deliver_time)}</Col>
                       </Row>
                       {item.status === 'delivered' ? (
-                        <DeliveredCardList snapshot={item.card_snapshot} />
+                        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                          <DeliveredCardList snapshot={item.card_snapshot} />
+                          {item.delivery_instructions ? (
+                            <div>
+                              <Typography.Title level={5} style={{ marginTop: 0 }}>
+                                发货说明
+                              </Typography.Title>
+                              <MarkdownBlock content={item.delivery_instructions} />
+                            </div>
+                          ) : null}
+                        </Space>
                       ) : (
                         <Typography.Text type="secondary">
                           当前订单还没有发卡，如已支付可前往

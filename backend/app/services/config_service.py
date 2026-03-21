@@ -97,6 +97,13 @@ DEFAULT_CONFIGS: list[ConfigSeed] = [
         "mail",
         "默认邮件正文模板（HTML）",
     ),
+    ConfigSeed(
+        "DELIVERY_DEFAULT_TEMPLATE",
+        "请按照商品说明完成使用，如有疑问请联系商家客服并提供订单号。",
+        "text",
+        "goods",
+        "默认发货说明模板",
+    ),
     ConfigSeed("ADMIN_ACCOUNTS", _default_admin_accounts(), "json", "security", "管理员账号配置", True),
     ConfigSeed("AGENT_ACCOUNTS", _default_agent_accounts(), "json", "agent", "代理账号配置", True),
     ConfigSeed("AGENT_CHANNELS", _default_agent_channels(), "json", "agent", "代理来源渠道配置", True),

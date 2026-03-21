@@ -18,7 +18,7 @@ from backend.app.core.security import generate_order_no
 from backend.app.db.base import now_local
 from backend.app.models.goods import Goods
 from backend.app.models.order import Order
-from backend.app.schemas.order import CreateOrderRequest
+from backend.app.schemas.order import CreateOrderRequest, OrderRead
 from backend.app.services.cdk_service import CdkService
 from backend.app.services.config_service import ConfigService
 from backend.app.services.email_service import EmailService
@@ -174,6 +174,20 @@ class OrderService:
         if order_no and not results:
             raise ValueError("未查询到相关订单")
         return results
+
+    def build_order_read(self, order: Order) -> OrderRead:
+        goods_title = None
+        delivery_instructions = None
+        try:
+            goods = self.goods_service.get_goods(order.goods_id)
+            goods_title = goods.title
+            delivery_instructions = (goods.delivery_instructions or "").strip() or self.config.get("DELIVERY_DEFAULT_TEMPLATE", "")
+        except ValueError:
+            goods = None
+        item = OrderRead.model_validate(order)
+        item.goods_title = goods_title
+        item.delivery_instructions = delivery_instructions
+        return item
 
     def list_orders(self, agent_code: str | None = None) -> list[Order]:
         stmt = select(Order).order_by(Order.id.desc())

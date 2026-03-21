@@ -97,7 +97,8 @@ async def update_goods(goods_id: int, payload: GoodsUpdate, _: dict = Depends(ad
 
 @router.get("/orders", response_model=ApiResponse[list[OrderRead]])
 async def admin_orders(_: dict = Depends(admin_auth), db: Session = Depends(get_db)) -> ApiResponse[list[OrderRead]]:
-    data = [OrderRead.model_validate(order) for order in OrderService(db).list_orders()]
+    service = OrderService(db)
+    data = [service.build_order_read(order) for order in service.list_orders()]
     return ApiResponse(message="获取成功", data=data)
 
 

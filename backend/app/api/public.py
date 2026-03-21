@@ -78,7 +78,7 @@ async def get_order(
         order = service.get_order_for_public(order_no, buyer_contact)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return ApiResponse(message="获取成功", data=OrderRead.model_validate(order))
+    return ApiResponse(message="获取成功", data=service.build_order_read(order))
 
 
 @router.post("/orders/{order_no}/check", response_model=ApiResponse[OrderRead])
@@ -92,7 +92,7 @@ async def check_order(
         order = service.reconcile_one_order(order_no, payload.buyer_contact)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return ApiResponse(message="检查完成", data=OrderRead.model_validate(order))
+    return ApiResponse(message="检查完成", data=service.build_order_read(order))
 
 
 @router.post("/orders/search", response_model=ApiResponse[list[OrderRead]])
@@ -102,4 +102,4 @@ async def search_orders(payload: OrderSearchRequest, db: Session = Depends(get_d
         rows = service.search_public_orders(order_no=payload.order_no, buyer_contact=payload.buyer_contact)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return ApiResponse(message="查询成功", data=[OrderRead.model_validate(item) for item in rows])
+    return ApiResponse(message="查询成功", data=[service.build_order_read(item) for item in rows])

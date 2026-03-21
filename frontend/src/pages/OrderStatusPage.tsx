@@ -1,9 +1,10 @@
 import { CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import { App, Button, Card, Col, Descriptions, Form, Input, Result, Row, Space, Typography } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { api, getErrorMessage, unwrap } from '../api/client';
 import { DeliveredCardList } from '../components/DeliveredCardList';
+import { MarkdownBlock } from '../components/MarkdownBlock';
 import { PublicPage } from '../components/PublicPage';
 import { StatusTag } from '../components/StatusTag';
 import type { OrderInfo } from '../types';
@@ -18,6 +19,8 @@ export function OrderStatusPage() {
   const [contact, setContact] = useState(localStorage.getItem(`nicefk-order-contact:${orderNo}`) ?? '');
   const [order, setOrder] = useState<OrderInfo | null>(null);
   const [checking, setChecking] = useState(false);
+  const deliveryRef = useRef<HTMLDivElement | null>(null);
+  const scrolledOrderRef = useRef('');
 
   async function fetchOrder() {
     if (!orderNo || !contact.trim()) {
@@ -77,6 +80,20 @@ export function OrderStatusPage() {
   }
 
   const statusMeta = useMemo(() => orderStatusMeta(order?.status ?? 'pending'), [order?.status]);
+
+  useEffect(() => {
+    if (order?.status !== 'delivered' || !deliveryRef.current) {
+      return;
+    }
+    const marker = `${order.order_no}:${order.deliver_time || order.pay_time || 'done'}`;
+    if (scrolledOrderRef.current === marker) {
+      return;
+    }
+    scrolledOrderRef.current = marker;
+    window.requestAnimationFrame(() => {
+      deliveryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [order?.deliver_time, order?.order_no, order?.pay_time, order?.status]);
 
   return (
     <PublicPage
@@ -138,13 +155,28 @@ export function OrderStatusPage() {
               </Descriptions>
             </Card>
 
-            <Card title="卡密结果" bordered={false}>
-              {order?.status === 'delivered' ? (
-                <DeliveredCardList snapshot={order.card_snapshot} />
-              ) : (
-                <Typography.Text type="secondary">支付成功后，卡密会自动展示在这里。</Typography.Text>
-              )}
-            </Card>
+            <div ref={deliveryRef}>
+              <Card title="卡密结果" bordered={false}>
+                {order?.status === 'delivered' ? (
+                  <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                    {order.goods_title ? (
+                      <Typography.Text type="secondary">商品：{order.goods_title}</Typography.Text>
+                    ) : null}
+                    <DeliveredCardList snapshot={order.card_snapshot} />
+                    {order.delivery_instructions ? (
+                      <div>
+                        <Typography.Title level={5} style={{ marginTop: 0 }}>
+                          发货说明
+                        </Typography.Title>
+                        <MarkdownBlock content={order.delivery_instructions} />
+                      </div>
+                    ) : null}
+                  </Space>
+                ) : (
+                  <Typography.Text type="secondary">支付成功后，卡密会自动展示在这里。</Typography.Text>
+                )}
+              </Card>
+            </div>
           </Space>
         </Col>
       </Row>

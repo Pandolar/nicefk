@@ -291,35 +291,106 @@ a {
   gap: 4px;
 }
 
-.public-paragraph.ant-typography {
-  margin-bottom: 0;
-  color: var(--text-secondary);
-}
-
 .markdown-block {
   color: var(--text-secondary);
+  line-height: 1.75;
 }
 
-.markdown-block .ant-typography {
+.markdown-block > :first-child {
+  margin-top: 0;
+}
+
+.markdown-block > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-block p,
+.markdown-block ul,
+.markdown-block ol,
+.markdown-block blockquote,
+.markdown-block pre,
+.markdown-block table,
+.markdown-block h1,
+.markdown-block h2,
+.markdown-block h3,
+.markdown-block h4,
+.markdown-block h5,
+.markdown-block h6 {
+  margin: 0 0 14px;
+}
+
+.markdown-block strong,
+.markdown-block b,
+.markdown-block em,
+.markdown-block span,
+.markdown-block code,
+.markdown-block a,
+.markdown-block li,
+.markdown-block p,
+.markdown-block td,
+.markdown-block th,
+.markdown-block blockquote {
   color: inherit;
 }
 
-.markdown-block__list {
-  margin: 0;
+.markdown-block ul,
+.markdown-block ol {
   padding-left: 20px;
-  color: var(--text-secondary);
 }
 
-.markdown-block__list li + li {
+.markdown-block li + li {
   margin-top: 6px;
 }
 
-.markdown-block__spacer {
-  width: 100%;
+.markdown-block a {
+  color: var(--brand-primary);
+  text-decoration: none;
 }
 
-.public-paragraph--pre.ant-typography {
-  white-space: pre-wrap;
+.markdown-block a:hover {
+  text-decoration: underline;
+}
+
+.markdown-block img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 14px;
+}
+
+.markdown-block code {
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(148, 163, 184, 0.16);
+  font-size: 0.92em;
+}
+
+.markdown-block pre {
+  overflow: auto;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.markdown-block pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.markdown-block blockquote {
+  padding-left: 14px;
+  border-left: 3px solid rgba(22, 119, 255, 0.25);
+}
+
+.markdown-block table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.markdown-block th,
+.markdown-block td {
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .payment-method-group {
@@ -376,22 +447,57 @@ a {
 }
 
 .goods-cover {
+  display: block;
   width: 100%;
   min-height: 280px;
+  max-width: 100%;
   border-radius: 18px;
-  object-fit: cover;
   background: rgba(148, 163, 184, 0.12);
 }
 
 .goods-cover--placeholder {
   display: flex;
+  width: 100%;
   min-height: 280px;
+  max-width: 100%;
   align-items: center;
   justify-content: center;
   flex-direction: column;
   gap: 8px;
+  border-radius: 18px;
   color: var(--text-secondary);
   background: rgba(148, 163, 184, 0.12);
+}
+
+.config-nav-list .ant-list-item {
+  margin-bottom: 8px;
+  border-radius: 12px;
+}
+
+.config-nav-list__item {
+  cursor: pointer;
+  padding: 14px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.config-nav-list__item:hover {
+  background: rgba(148, 163, 184, 0.06);
+}
+
+.config-nav-list__item--active {
+  background: rgba(22, 119, 255, 0.08);
+  border-color: rgba(22, 119, 255, 0.18);
+}
+
+.config-editor-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.08);
 }
 
 .auth-layout {

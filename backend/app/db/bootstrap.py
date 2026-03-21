@@ -25,6 +25,14 @@ def ensure_schema_compatibility(engine: Engine) -> None:
         statements.append("ALTER TABLE fk_goods ADD COLUMN stock_display_mode VARCHAR(16) NOT NULL DEFAULT 'real'")
     if "stock_display_text" not in goods_columns:
         statements.append("ALTER TABLE fk_goods ADD COLUMN stock_display_text TEXT NULL")
+    if "cover_fit_mode" not in goods_columns:
+        statements.append("ALTER TABLE fk_goods ADD COLUMN cover_fit_mode VARCHAR(16) NOT NULL DEFAULT 'cover'")
+    if "cover_width" not in goods_columns:
+        statements.append("ALTER TABLE fk_goods ADD COLUMN cover_width INTEGER NULL")
+    if "cover_height" not in goods_columns:
+        statements.append("ALTER TABLE fk_goods ADD COLUMN cover_height INTEGER NULL")
+    if "delivery_instructions" not in goods_columns:
+        statements.append("ALTER TABLE fk_goods ADD COLUMN delivery_instructions TEXT NULL")
     if "email_enabled" not in goods_columns:
         statements.append("ALTER TABLE fk_goods ADD COLUMN email_enabled BOOLEAN NOT NULL DEFAULT 0")
     if "email_subject_template" not in goods_columns:
