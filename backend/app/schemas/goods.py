@@ -1,8 +1,7 @@
 """Schema models for goods endpoints."""
 
 from decimal import Decimal
-
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class GoodsBase(BaseModel):
@@ -24,6 +23,13 @@ class GoodsBase(BaseModel):
     stock_display_mode: str = "real"
     stock_display_text: str | None = None
     sort_order: int = 0
+
+    @field_validator("delivery_instructions", mode="before")
+    @classmethod
+    def normalize_delivery_instructions(cls, value: str | None) -> str:
+        """Keep legacy NULL values from breaking response serialization."""
+
+        return value or ""
 
 
 class GoodsCreate(GoodsBase):

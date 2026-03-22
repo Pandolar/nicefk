@@ -1,8 +1,10 @@
 from decimal import Decimal
+from types import SimpleNamespace
 
 from backend.app.models.goods import Goods
 from backend.app.models.order import Order
 from backend.app.schemas.cdk import CdkImportRequest
+from backend.app.schemas.goods import GoodsAdminRead
 from backend.app.services.cdk_service import CdkService
 from backend.app.services.config_service import ConfigService
 from backend.app.services.payments.epay import EpayService
@@ -242,6 +244,35 @@ async def test_admin_can_change_password(client, db_session):
 
     new_login = await client.post('/api/admin/auth/login', json={'username': 'admin', 'password': 'Admin@654321'})
     assert new_login.status_code == 200
+
+
+def test_goods_admin_read_normalizes_null_delivery_instructions():
+    payload = SimpleNamespace(
+        id=1,
+        title='测试商品',
+        slug='test-goods',
+        cover=None,
+        cover_fit_mode='cover',
+        cover_width=None,
+        cover_height=None,
+        description='demo',
+        delivery_instructions=None,
+        price=Decimal('9.90'),
+        original_price=None,
+        status='on',
+        contact_type='both',
+        pay_methods=['alipay'],
+        stock_display_mode='real',
+        stock_display_text=None,
+        sort_order=0,
+        available_stock=1,
+        email_enabled=False,
+        email_subject_template=None,
+        email_body_template=None,
+    )
+
+    item = GoodsAdminRead.model_validate(payload)
+    assert item.delivery_instructions == ''
 
 
 @pytest.mark.anyio
