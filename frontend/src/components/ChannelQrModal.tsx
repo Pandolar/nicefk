@@ -19,6 +19,8 @@ type Props = {
   open: boolean;
   storageScope: string;
   channel: ChannelItem | null;
+  siteUrl?: string;
+  fallbackGoodsId?: number | null;
   onClose: () => void;
 };
 
@@ -50,7 +52,22 @@ const cornerDotOptions = [
   { label: '圆润方块', value: 'extra-rounded' }
 ];
 
-export function ChannelQrModal({ open, storageScope, channel, onClose }: Props) {
+function resolvePromoLink(channel: ChannelItem | null, siteUrl?: string, fallbackGoodsId?: number | null) {
+  if (!channel) {
+    return '';
+  }
+  if (channel.promo_link) {
+    return channel.promo_link;
+  }
+  const goodsId = channel.goods_id || fallbackGoodsId;
+  if (!goodsId) {
+    return '';
+  }
+  const baseUrl = (siteUrl || window.location.origin || '').replace(/\/$/, '');
+  return `${baseUrl}/goods/${goodsId}?agent_code=${channel.agent_code}&channel_code=${channel.channel_code}`;
+}
+
+export function ChannelQrModal({ open, storageScope, channel, siteUrl, fallbackGoodsId, onClose }: Props) {
   const { message } = App.useApp();
   const previewRef = useRef<HTMLDivElement | null>(null);
   const qrInstanceRef = useRef<QRCodeStyling | null>(null);
@@ -58,7 +75,7 @@ export function ChannelQrModal({ open, storageScope, channel, onClose }: Props) 
   const [presets, setPresets] = useState<ChannelQrStylePreset[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<string>();
   const [presetName, setPresetName] = useState('');
-  const promoLink = channel?.promo_link || '';
+  const promoLink = useMemo(() => resolvePromoLink(channel, siteUrl, fallbackGoodsId), [channel, fallbackGoodsId, siteUrl]);
 
   const presetOptions = useMemo(
     () => presets.map((item) => ({ label: item.name, value: item.id })),
@@ -252,6 +269,11 @@ export function ChannelQrModal({ open, storageScope, channel, onClose }: Props) 
                 <Typography.Text type="secondary">
                   当前样式会自动记住，下次新增或查看其他博主渠道二维码时会默认沿用。
                 </Typography.Text>
+                {!promoLink ? (
+                  <Typography.Text type="warning">
+                    当前渠道没有可用推广链接。请为该渠道绑定默认商品，或检查站点地址配置。
+                  </Typography.Text>
+                ) : null}
               </Space>
             </Card>
 

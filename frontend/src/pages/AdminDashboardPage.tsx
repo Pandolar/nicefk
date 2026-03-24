@@ -1856,7 +1856,14 @@ export function AdminDashboardPage() {
         />
       </ModalForm>
 
-      <ChannelQrModal open={Boolean(qrChannel)} storageScope="admin" channel={qrChannel} onClose={() => setQrChannel(null)} />
+      <ChannelQrModal
+        open={Boolean(qrChannel)}
+        storageScope="admin"
+        channel={qrChannel}
+        siteUrl={siteUrl}
+        fallbackGoodsId={goods[0]?.id}
+        onClose={() => setQrChannel(null)}
+      />
     </Layout>
   );
 }

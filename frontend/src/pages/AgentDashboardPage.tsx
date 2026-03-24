@@ -724,6 +724,8 @@ export function AgentDashboardPage() {
         open={Boolean(qrChannel)}
         storageScope={`agent:${agentCode || 'default'}`}
         channel={qrChannel}
+        siteUrl={summary.site_url || window.location.origin}
+        fallbackGoodsId={goods[0]?.id || summary.allowed_goods_ids?.[0] || null}
         onClose={() => setQrChannel(null)}
       />
     </Layout>
