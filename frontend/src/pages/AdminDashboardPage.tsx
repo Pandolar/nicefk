@@ -4,6 +4,7 @@ import {
   LogoutOutlined,
   MenuOutlined,
   NotificationOutlined,
+  QrcodeOutlined,
   ReloadOutlined,
   SettingOutlined,
   ShopOutlined,
@@ -49,6 +50,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, authHeaders, getErrorMessage, unwrap } from '../api/client';
+import { ChannelQrModal } from '../components/ChannelQrModal';
 import { StatusTag } from '../components/StatusTag';
 import type { AgentAccount, CdkItem, ChannelItem, ConfigItem, DashboardSummary, GoodsItem, OrderInfo } from '../types';
 import { ADMIN_TOKEN_KEY, clearAdminSession } from '../utils/auth';
@@ -309,6 +311,7 @@ export function AdminDashboardPage() {
   const [editingGoods, setEditingGoods] = useState<GoodsItem | null>(null);
   const [editingAgent, setEditingAgent] = useState<AgentAccount | null>(null);
   const [editingChannel, setEditingChannel] = useState<ChannelItem | null>(null);
+  const [qrChannel, setQrChannel] = useState<ChannelItem | null>(null);
   const [selectedCardIds, setSelectedCardIds] = useState<number[]>([]);
   const [selectedChannelKeys, setSelectedChannelKeys] = useState<string[]>([]);
   const [selectedConfigKey, setSelectedConfigKey] = useState('SITE_NOTICE');
@@ -470,7 +473,7 @@ export function AdminDashboardPage() {
             email_enabled: false,
             email_subject_template: '您的订单 {{order_no}} 已自动发货',
             email_body_template:
-              '<h2>订单发货成功</h2><p>商品：{{goods_title}}</p><p>订单号：{{order_no}}</p><p>支付时间：{{pay_time}}</p><p>卡密：{{card_code}}</p><p>密钥：{{card_secret}}</p>',
+              '<h2>订单发货成功</h2><p>商品：{{goods_title}}</p><p>订单号：{{order_no}}</p><p>支付时间：{{pay_time}}</p><p>卡密：{{card_code}}</p><p>附加密钥（如有）：{{card_secret}}</p>',
             sort_order: 0
           }
     );
@@ -732,20 +735,22 @@ export function AdminDashboardPage() {
         goods_id: values.goods_id || undefined,
         note: values.note || undefined
       };
+      let savedChannel: ChannelItem;
       if (editingChannel) {
-        await unwrap<ChannelItem>(
+        savedChannel = await unwrap<ChannelItem>(
           api.put(`/api/admin/channels/${editingChannel.agent_code}/${editingChannel.channel_code}`, payload, {
             headers: authHeaders(token)
           })
         );
         message.success('渠道更新成功');
       } else {
-        await unwrap<ChannelItem>(api.post('/api/admin/channels', payload, { headers: authHeaders(token) }));
+        savedChannel = await unwrap<ChannelItem>(api.post('/api/admin/channels', payload, { headers: authHeaders(token) }));
         message.success('渠道创建成功');
       }
       setChannelModalOpen(false);
       setEditingChannel(null);
       channelForm.resetFields();
+      setQrChannel(savedChannel);
       await loadAll();
       return true;
     } catch (error) {
@@ -863,7 +868,7 @@ export function AdminDashboardPage() {
     {
       title: '操作',
       valueType: 'option',
-      width: 90,
+      width: 140,
       render: (_, record) => [
         <Button
           key="edit"
@@ -1062,7 +1067,7 @@ export function AdminDashboardPage() {
     {
       title: '操作',
       valueType: 'option',
-      width: 90,
+      width: 140,
       render: (_, record) => [
         <Button
           key="edit"
@@ -1073,6 +1078,9 @@ export function AdminDashboardPage() {
           }}
         >
           编辑
+        </Button>,
+        <Button key="qr" type="link" icon={<QrcodeOutlined />} onClick={() => setQrChannel(record)}>
+          二维码
         </Button>
       ]
     }
@@ -1705,7 +1713,7 @@ export function AdminDashboardPage() {
                   name="email_body_template"
                   label="邮件正文模板（HTML）"
                   fieldProps={{ rows: 8 }}
-                  extra="可用变量：{{goods_title}} {{order_no}} {{buyer_contact}} {{pay_time}} {{deliver_time}} {{amount}} {{card_code}} {{card_secret}} {{trade_no}}"
+                  extra="可用变量：{{goods_title}} {{order_no}} {{buyer_contact}} {{pay_time}} {{deliver_time}} {{amount}} {{card_code}} {{card_secret}} {{trade_no}}；其中 {{card_code}} 是主卡密，{{card_secret}} 是可选附加密钥，如果你只有单段卡密，只用 {{card_code}} 即可"
                 />
               </>
             ) : null
@@ -1847,6 +1855,8 @@ export function AdminDashboardPage() {
           rules={[{ required: true, message: '请输入批量内容' }]}
         />
       </ModalForm>
+
+      <ChannelQrModal open={Boolean(qrChannel)} storageScope="admin" channel={qrChannel} onClose={() => setQrChannel(null)} />
     </Layout>
   );
 }

@@ -38,7 +38,7 @@ export function AgentLoginPage() {
       description="输入账号密码后进入工作台。"
     >
       <Typography.Title level={3}>代理登录</Typography.Title>
-      <Form form={form} layout="vertical" initialValues={{ username: 'agent_demo', password: 'Agent@123456' }} onFinish={handleFinish}>
+      <Form form={form} layout="vertical" onFinish={handleFinish}>
         <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入代理用户名' }]}>
           <Input prefix={<UserOutlined />} placeholder="请输入用户名" autoComplete="username" />
         </Form.Item>

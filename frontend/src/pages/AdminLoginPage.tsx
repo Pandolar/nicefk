@@ -36,8 +36,7 @@ export function AdminLoginPage() {
       tips={['支持商品、卡密、订单、代理、渠道统一管理', '渠道数据按浏览、下单、支付、金额四个维度汇总', '敏感配置继续通过统一配置中心维护']}
     >
       <Typography.Title level={3}>管理员登录</Typography.Title>
-      <Typography.Paragraph type="secondary">默认测试账号已经预填，你也可以切换为自己的正式账号。</Typography.Paragraph>
-      <Form form={form} layout="vertical" initialValues={{ username: 'admin', password: 'Admin@123456' }} onFinish={handleFinish}>
+      <Form form={form} layout="vertical" onFinish={handleFinish}>
         <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入管理员用户名' }]}>
           <Input prefix={<UserOutlined />} placeholder="请输入用户名" autoComplete="username" />
         </Form.Item>

@@ -4,6 +4,7 @@ import {
   LogoutOutlined,
   MenuOutlined,
   PlusOutlined,
+  QrcodeOutlined,
   ReloadOutlined,
   TagsOutlined,
   UnorderedListOutlined
@@ -23,6 +24,7 @@ import type { MenuProps } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, authHeaders, getErrorMessage, unwrap } from '../api/client';
+import { ChannelQrModal } from '../components/ChannelQrModal';
 import { StatusTag } from '../components/StatusTag';
 import type { AgentDashboardSummary, ChannelItem, GoodsItem, OrderInfo } from '../types';
 import { AGENT_CODE_KEY, AGENT_TOKEN_KEY, clearAgentSession } from '../utils/auth';
@@ -198,6 +200,7 @@ export function AgentDashboardPage() {
   const [channelModalOpen, setChannelModalOpen] = useState(false);
   const [channelBatchModalOpen, setChannelBatchModalOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<ChannelItem | null>(null);
+  const [qrChannel, setQrChannel] = useState<ChannelItem | null>(null);
   const [selectedChannelKeys, setSelectedChannelKeys] = useState<string[]>([]);
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -253,7 +256,7 @@ export function AgentDashboardPage() {
     {
       title: '操作',
       valueType: 'option',
-      width: 80,
+      width: 140,
       render: (_, record) => [
         <Button
           key="edit"
@@ -264,6 +267,9 @@ export function AgentDashboardPage() {
           }}
         >
           编辑
+        </Button>,
+        <Button key="qr" type="link" icon={<QrcodeOutlined />} onClick={() => setQrChannel(record)}>
+          二维码
         </Button>
       ]
     }
@@ -394,16 +400,18 @@ export function AgentDashboardPage() {
         goods_id: values.goods_id || undefined,
         note: values.note || undefined
       };
+      let savedChannel: ChannelItem;
       if (editingChannel) {
-        await unwrap<ChannelItem>(api.put(`/api/agent/channels/${editingChannel.channel_code}`, payload, { headers: authHeaders(token) }));
+        savedChannel = await unwrap<ChannelItem>(api.put(`/api/agent/channels/${editingChannel.channel_code}`, payload, { headers: authHeaders(token) }));
         message.success('渠道更新成功');
       } else {
-        await unwrap<ChannelItem>(api.post('/api/agent/channels', payload, { headers: authHeaders(token) }));
+        savedChannel = await unwrap<ChannelItem>(api.post('/api/agent/channels', payload, { headers: authHeaders(token) }));
         message.success('渠道创建成功');
       }
       setChannelModalOpen(false);
       setEditingChannel(null);
       channelForm.resetFields();
+      setQrChannel(savedChannel);
       await loadAll();
       return true;
     } catch (error) {
@@ -711,6 +719,13 @@ export function AgentDashboardPage() {
           rules={[{ required: true, message: '请输入批量内容' }]}
         />
       </ModalForm>
+
+      <ChannelQrModal
+        open={Boolean(qrChannel)}
+        storageScope={`agent:${agentCode || 'default'}`}
+        channel={qrChannel}
+        onClose={() => setQrChannel(null)}
+      />
     </Layout>
   );
 }

@@ -92,7 +92,7 @@ DEFAULT_CONFIGS: list[ConfigSeed] = [
     ConfigSeed("EMAIL_DEFAULT_SUBJECT", "您的订单 {{order_no}} 已自动发货", "text", "mail", "默认邮件主题模板"),
     ConfigSeed(
         "EMAIL_DEFAULT_TEMPLATE",
-        "<h2>订单发货成功</h2><p>商品：{{goods_title}}</p><p>订单号：{{order_no}}</p><p>支付时间：{{pay_time}}</p><p>卡密：{{card_code}}</p><p>密钥：{{card_secret}}</p>",
+        "<h2>订单发货成功</h2><p>商品：{{goods_title}}</p><p>订单号：{{order_no}}</p><p>支付时间：{{pay_time}}</p><p>卡密：{{card_code}}</p><p>附加密钥（如有）：{{card_secret}}</p>",
         "text",
         "mail",
         "默认邮件正文模板（HTML）",
