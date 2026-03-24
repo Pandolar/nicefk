@@ -9,6 +9,7 @@ import {
   defaultChannelQrStyle,
   loadChannelQrPresets,
   loadLastChannelQrStyle,
+  normalizeChannelQrStyle,
   saveChannelQrPresets,
   saveLastChannelQrStyle,
   type ChannelQrStylePreset,
@@ -71,10 +72,12 @@ export function ChannelQrModal({ open, storageScope, channel, siteUrl, fallbackG
   const { message } = App.useApp();
   const previewRef = useRef<HTMLDivElement | null>(null);
   const qrInstanceRef = useRef<QRCodeStyling | null>(null);
+  const renderedSettingsRef = useRef<ChannelQrStyleSettings>(defaultChannelQrStyle);
   const [settings, setSettings] = useState<ChannelQrStyleSettings>(defaultChannelQrStyle);
   const [presets, setPresets] = useState<ChannelQrStylePreset[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<string>();
   const [presetName, setPresetName] = useState('');
+  const [previewWarning, setPreviewWarning] = useState('');
   const promoLink = useMemo(() => resolvePromoLink(channel, siteUrl, fallbackGoodsId), [channel, fallbackGoodsId, siteUrl]);
 
   const presetOptions = useMemo(
@@ -93,29 +96,84 @@ export function ChannelQrModal({ open, storageScope, channel, siteUrl, fallbackG
   }, [open, storageScope]);
 
   useEffect(() => {
-    if (!open || !promoLink || !previewRef.current) {
+    if (!open) {
+      setPreviewWarning('');
+      qrInstanceRef.current = null;
       return;
     }
 
-    const container = previewRef.current;
-    container.innerHTML = '';
-    const instance = new QRCodeStyling(buildChannelQrOptions(promoLink, settings));
-    qrInstanceRef.current = instance;
-    instance.append(container);
+    const containerElement = previewRef.current;
+    if (!containerElement) {
+      return;
+    }
+    const container = containerElement;
+
+    let cancelled = false;
+
+    async function mountInstance(nextSettings: ChannelQrStyleSettings) {
+      const instance = new QRCodeStyling(buildChannelQrOptions(promoLink, nextSettings));
+      container.innerHTML = '';
+      instance.append(container);
+      await instance.getRawData('svg');
+      if (cancelled) {
+        return;
+      }
+      qrInstanceRef.current = instance;
+      renderedSettingsRef.current = nextSettings;
+    }
+
+    async function renderPreview() {
+      qrInstanceRef.current = null;
+      setPreviewWarning('');
+      container.innerHTML = '';
+
+      if (!promoLink) {
+        return;
+      }
+
+      const normalizedSettings = normalizeChannelQrStyle(settings);
+      try {
+        await mountInstance(normalizedSettings);
+      } catch {
+        if (!normalizedSettings.image) {
+          if (!cancelled) {
+            container.innerHTML = '';
+            message.error('二维码生成失败，请检查当前样式配置');
+          }
+          return;
+        }
+
+        try {
+          const fallbackSettings = normalizeChannelQrStyle({ ...normalizedSettings, image: '' });
+          await mountInstance(fallbackSettings);
+          if (!cancelled) {
+            setPreviewWarning('中心 Logo 加载失败，已自动切换为无 Logo 版本进行预览和下载。');
+            message.warning('中心 Logo 加载失败，已自动切换为无 Logo 二维码');
+          }
+        } catch {
+          if (!cancelled) {
+            container.innerHTML = '';
+            message.error('二维码生成失败，请检查推广链接或样式配置');
+          }
+        }
+      }
+    }
+
+    void renderPreview();
 
     return () => {
+      cancelled = true;
       qrInstanceRef.current = null;
       container.innerHTML = '';
     };
-  }, [open, promoLink]);
+  }, [message, open, promoLink, settings]);
 
   useEffect(() => {
-    if (!open || !promoLink || !qrInstanceRef.current) {
+    if (!open) {
       return;
     }
-    qrInstanceRef.current.update(buildChannelQrOptions(promoLink, settings));
     saveLastChannelQrStyle(storageScope, settings);
-  }, [open, promoLink, settings, storageScope]);
+  }, [open, settings, storageScope]);
 
   function updateSetting<Key extends keyof ChannelQrStyleSettings>(key: Key, value: ChannelQrStyleSettings[Key]) {
     setSettings((current) => ({
@@ -188,17 +246,51 @@ export function ChannelQrModal({ open, storageScope, channel, siteUrl, fallbackG
   }
 
   async function downloadQr(extension: 'png' | 'svg') {
-    if (!promoLink || !qrInstanceRef.current || !channel) {
+    if (!promoLink || !channel) {
       message.warning('当前渠道还没有可下载的二维码');
       return;
     }
+
+    async function resolveBlob() {
+      const activeInstance = qrInstanceRef.current;
+      if (activeInstance) {
+        const raw = await activeInstance.getRawData(extension);
+        if (raw instanceof Blob) {
+          return { blob: raw, fallbackUsed: renderedSettingsRef.current.image !== settings.image };
+        }
+      }
+
+      const normalizedSettings = normalizeChannelQrStyle(settings);
+      if (!normalizedSettings.image) {
+        return null;
+      }
+
+      const fallbackInstance = new QRCodeStyling(buildChannelQrOptions(promoLink, { ...normalizedSettings, image: '' }));
+      const raw = await fallbackInstance.getRawData(extension);
+      if (raw instanceof Blob) {
+        return { blob: raw, fallbackUsed: true };
+      }
+      return null;
+    }
+
     try {
-      await qrInstanceRef.current.download({
-        name: buildChannelQrFileName(channel.agent_code, channel.channel_code),
-        extension
-      });
+      const result = await resolveBlob();
+      if (!result) {
+        throw new Error('qr-download-failed');
+      }
+      const url = URL.createObjectURL(result.blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${buildChannelQrFileName(channel.agent_code, channel.channel_code)}.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      if (result.fallbackUsed) {
+        message.warning('Logo 加载失败，已下载无 Logo 版本二维码');
+      }
     } catch {
-      message.error('下载失败，请检查 Logo 图片是否允许跨域访问');
+      message.error('下载失败，请检查推广链接或 Logo 图片地址是否可访问');
     }
   }
 
@@ -269,6 +361,7 @@ export function ChannelQrModal({ open, storageScope, channel, siteUrl, fallbackG
                 <Typography.Text type="secondary">
                   当前样式会自动记住，下次新增或查看其他博主渠道二维码时会默认沿用。
                 </Typography.Text>
+                {previewWarning ? <Typography.Text type="warning">{previewWarning}</Typography.Text> : null}
                 {!promoLink ? (
                   <Typography.Text type="warning">
                     当前渠道没有可用推广链接。请为该渠道绑定默认商品，或检查站点地址配置。
